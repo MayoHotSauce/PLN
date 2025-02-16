@@ -9,6 +9,9 @@ class Pemakaian extends Model
 {
     use HasFactory;
 
+    const STATUS_LUNAS = 'lunas';
+    const STATUS_BELUM_LUNAS = 'belum_lunas';
+
     protected $table = 'pemakaians';
     
     protected $fillable = [
@@ -18,10 +21,14 @@ class Pemakaian extends Model
         'meter_awal',
         'meter_akhir',
         'jumlah_pakai',
-        'biaya_beban_pemakai',
+        'biaya_beban',
         'biaya_pemakaian',
-        'status_pembayaran'
+        'total_bayar',
+        'status_pembayaran',
+        'tanggal_bayar'
     ];
+
+    protected $dates = ['tanggal_bayar'];
 
     public function pelanggan()
     {

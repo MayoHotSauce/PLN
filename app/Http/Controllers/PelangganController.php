@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pelanggan;
+use App\Models\Tarif;
 use Illuminate\Http\Request;
 
 class PelangganController extends Controller
@@ -21,7 +22,13 @@ class PelangganController extends Controller
      */
     public function create()
     {
-        return view('pelanggan.create');
+        // Generate nomor kontrol otomatis
+        $lastPelanggan = Pelanggan::orderBy('no_kontrol', 'desc')->first();
+        $lastNumber = $lastPelanggan ? intval(substr($lastPelanggan->no_kontrol, 3)) : 0;
+        $noKontrol = 'PLN' . str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        
+        $tarifs = Tarif::all();
+        return view('pelanggan.create', compact('tarifs', 'noKontrol'));
     }
 
     /**
@@ -29,17 +36,21 @@ class PelangganController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'no_kontrol' => 'required|unique:pelanggans',
+        $validated = $request->validate([
             'nama' => 'required',
             'alamat' => 'required',
             'telepon' => 'required',
-            'jenis_plg' => 'required'
+            'tarif_id' => 'required|exists:tarifs,id'
         ]);
 
-        Pelanggan::create($request->all());
-        return redirect()->route('pelanggan.index')
-            ->with('success', 'Pelanggan berhasil ditambahkan.');
+        // Tambahkan no_kontrol ke data yang akan disimpan
+        $validated['no_kontrol'] = $request->no_kontrol;
+
+        Pelanggan::create($validated);
+
+        return redirect()
+            ->route('pelanggan.index')
+            ->with('success', 'Pelanggan berhasil ditambahkan');
     }
 
     /**
@@ -55,7 +66,8 @@ class PelangganController extends Controller
      */
     public function edit(Pelanggan $pelanggan)
     {
-        return view('pelanggan.edit', compact('pelanggan'));
+        $tarifs = Tarif::all();
+        return view('pelanggan.edit', compact('pelanggan', 'tarifs'));
     }
 
     /**

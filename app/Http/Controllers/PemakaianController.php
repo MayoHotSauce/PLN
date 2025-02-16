@@ -6,6 +6,7 @@ use App\Models\Pemakaian;
 use App\Models\Pelanggan;
 use App\Models\Tarif;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PemakaianController extends Controller
 {
@@ -14,7 +15,34 @@ class PemakaianController extends Controller
      */
     public function index()
     {
-        $pemakaians = Pemakaian::with('pelanggan')->latest()->paginate(10);
+        $tahun = request('tahun', date('Y'));
+        $bulan = request('bulan');
+        
+        // Convert bulan dari nama ke angka jika diperlukan
+        if ($bulan && !is_numeric($bulan)) {
+            $bulan = date('n', strtotime("1 $bulan"));
+        }
+        
+        $query = Pemakaian::with('pelanggan')
+            ->where('tahun', $tahun);
+        
+        if ($bulan) {
+            $query->where('bulan', (int)$bulan);
+        }
+
+        $pemakaians = $query
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
+        // Debug
+        \Log::info('Filter Query:', [
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings()
+        ]);
+
         return view('pemakaian.index', compact('pemakaians'));
     }
 
@@ -24,7 +52,10 @@ class PemakaianController extends Controller
     public function create()
     {
         $pelanggans = Pelanggan::all();
-        return view('pemakaian.create', compact('pelanggans'));
+        $tahun = now()->year;
+        $bulan = now()->month; // Menggunakan angka bulan (1-12)
+        
+        return view('pemakaian.create', compact('pelanggans', 'tahun', 'bulan'));
     }
 
     /**
@@ -32,34 +63,53 @@ class PemakaianController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'tahun' => 'required|numeric',
-            'bulan' => 'required|numeric|min:1|max:12',
-            'no_kontrol' => 'required|exists:pelanggans,no_kontrol',
+        $validated = $request->validate([
+            'tahun' => 'required',
+            'bulan' => 'required|numeric|between:1,12',
+            'pelanggan_id' => 'required|exists:pelanggans,no_kontrol',
             'meter_awal' => 'required|numeric',
-            'meter_akhir' => 'required|numeric|gt:meter_awal'
+            'meter_akhir' => 'required|numeric|gt:meter_awal',
         ]);
 
+        // Ambil data pelanggan beserta tarifnya
+        $pelanggan = Pelanggan::with('tarif')->find($validated['pelanggan_id']);
+        
+        // Cek apakah pelanggan dan tarif ada
+        if (!$pelanggan || !$pelanggan->tarif) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Data tarif pelanggan tidak ditemukan. Silakan set tarif pelanggan terlebih dahulu.');
+        }
+
         // Hitung jumlah pemakaian
-        $jumlah_pakai = $request->meter_akhir - $request->meter_awal;
+        $jumlah_pakai = $validated['meter_akhir'] - $validated['meter_awal'];
 
-        // Ambil data pelanggan dan tarif
-        $pelanggan = Pelanggan::find($request->no_kontrol);
-        $tarif = Tarif::where('jenis_plg', $pelanggan->jenis_plg)->first();
+        // Hitung biaya pemakaian (hanya dari KWH)
+        $biaya_pemakaian = $jumlah_pakai * $pelanggan->tarif->tarif_kwh;
+        
+        // Ambil biaya beban dari tarif
+        $biaya_beban = $pelanggan->tarif->biaya_beban;
 
-        // Hitung biaya
-        $biaya_pemakaian = $jumlah_pakai * $tarif->tarif_kwh;
-        $biaya_beban_pemakai = $tarif->biaya_beban;
+        // Hitung total bayar
+        $total_bayar = $biaya_pemakaian + $biaya_beban;
 
-        // Buat array data pemakaian
-        $data = $request->all();
-        $data['jumlah_pakai'] = $jumlah_pakai;
-        $data['biaya_pemakaian'] = $biaya_pemakaian;
-        $data['biaya_beban_pemakai'] = $biaya_beban_pemakai;
+        Pemakaian::create([
+            'tahun' => $validated['tahun'],
+            'bulan' => (int)$validated['bulan'],
+            'no_kontrol' => $pelanggan->no_kontrol,
+            'meter_awal' => $validated['meter_awal'],
+            'meter_akhir' => $validated['meter_akhir'],
+            'jumlah_pakai' => $jumlah_pakai,
+            'biaya_pemakaian' => $biaya_pemakaian,
+            'biaya_beban' => $biaya_beban,
+            'total_bayar' => $total_bayar,
+            'status_pembayaran' => 'belum_bayar'
+        ]);
 
-        Pemakaian::create($data);
-        return redirect()->route('pemakaian.index')
-            ->with('success', 'Data pemakaian berhasil ditambahkan.');
+        return redirect()
+            ->route('pemakaian.index')
+            ->with('success', 'Data pemakaian berhasil ditambahkan');
     }
 
     /**
@@ -140,5 +190,27 @@ class PemakaianController extends Controller
         }
 
         return view('welcome', compact('tagihan'));
+    }
+
+    public function pay(Pemakaian $pemakaian)
+    {
+        if ($pemakaian->status_pembayaran === Pemakaian::STATUS_LUNAS) {
+            return back()->with('error', 'Tagihan ini sudah lunas.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $pemakaian->update([
+                'status_pembayaran' => Pemakaian::STATUS_LUNAS,
+                'tanggal_bayar' => now()
+            ]);
+            
+            DB::commit();
+            return back()->with('success', 'Pembayaran berhasil dikonfirmasi.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Payment Error: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat memproses pembayaran.');
+        }
     }
 }

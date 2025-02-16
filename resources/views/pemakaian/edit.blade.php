@@ -3,90 +3,121 @@
 @section('header', 'Edit Pemakaian Listrik')
 
 @section('content')
-<form action="{{ route('pemakaian.update', $pemakaian->id) }}" method="POST" class="max-w-2xl">
-    @csrf
-    @method('PUT')
-    
-    <div class="grid grid-cols-2 gap-4 mb-4">
-        <div>
-            <label for="tahun" class="block text-gray-700 text-sm font-bold mb-2">Tahun</label>
-            <input type="text" 
-                   value="{{ $pemakaian->tahun }}" 
-                   class="bg-gray-100 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
-                   readonly>
-        </div>
+<div class="fade-in p-6">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-gray-800/50 rounded-xl shadow-sm p-6">
+            <h2 class="text-xl font-semibold text-white mb-6">Edit Data Pemakaian</h2>
+            
+            <form action="{{ route('pemakaian.update', $pemakaian->id) }}" method="POST" class="space-y-6">
+                @csrf
+                @method('PUT')
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">
+                            Tahun
+                        </label>
+                        <select name="tahun" 
+                                class="w-full bg-gray-700 border-0 rounded-lg text-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500"
+                                required>
+                            @foreach(range(date('Y'), 2020) as $year)
+                                <option value="{{ $year }}" {{ old('tahun', $pemakaian->tahun) == $year ? 'selected' : '' }}>
+                                    {{ $year }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-        <div>
-            <label for="bulan" class="block text-gray-700 text-sm font-bold mb-2">Bulan</label>
-            <input type="text" 
-                   value="{{ date('F', mktime(0, 0, 0, $pemakaian->bulan, 1)) }}" 
-                   class="bg-gray-100 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
-                   readonly>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">
+                            Bulan
+                        </label>
+                        <select name="bulan" 
+                                class="w-full bg-gray-700 border-0 rounded-lg text-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500"
+                                required>
+                            @foreach(range(1, 12) as $month)
+                                <option value="{{ $month }}" {{ old('bulan', $pemakaian->bulan) == $month ? 'selected' : '' }}>
+                                    {{ date('F', mktime(0, 0, 0, $month, 1)) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">
+                        Pelanggan
+                    </label>
+                    <select name="pelanggan_id" 
+                            class="w-full bg-gray-700 border-0 rounded-lg text-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500"
+                            required>
+                        @foreach($pelanggans as $pelanggan)
+                            <option value="{{ $pelanggan->id }}" 
+                                    {{ old('pelanggan_id', $pemakaian->pelanggan_id) == $pelanggan->id ? 'selected' : '' }}
+                                    data-no-kontrol="{{ $pelanggan->no_kontrol }}">
+                                {{ $pelanggan->nama }} - {{ $pelanggan->no_kontrol }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">
+                        No Kontrol
+                    </label>
+                    <input type="text" 
+                           name="no_kontrol" 
+                           id="no_kontrol"
+                           value="{{ old('no_kontrol', $pemakaian->no_kontrol) }}"
+                           readonly
+                           class="w-full bg-gray-700/50 border-0 rounded-lg text-gray-400 px-4 py-2.5">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">
+                            Meter Awal
+                        </label>
+                        <input type="number" 
+                               name="meter_awal" 
+                               value="{{ old('meter_awal', $pemakaian->meter_awal) }}"
+                               class="w-full bg-gray-700 border-0 rounded-lg text-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500"
+                               required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">
+                            Meter Akhir
+                        </label>
+                        <input type="number" 
+                               name="meter_akhir" 
+                               value="{{ old('meter_akhir', $pemakaian->meter_akhir) }}"
+                               class="w-full bg-gray-700 border-0 rounded-lg text-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500"
+                               required>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200">
+                        Simpan Perubahan
+                    </button>
+                    <a href="{{ route('pemakaian.index') }}" 
+                       class="px-4 py-2 text-gray-400 hover:text-gray-300 transition-colors">
+                        Batal
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
-
-    <div class="mb-4">
-        <label for="no_kontrol" class="block text-gray-700 text-sm font-bold mb-2">Pelanggan</label>
-        <input type="text" 
-               value="{{ $pemakaian->pelanggan->no_kontrol }} - {{ $pemakaian->pelanggan->nama }}" 
-               class="bg-gray-100 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
-               readonly>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-4">
-        <div>
-            <label for="meter_awal" class="block text-gray-700 text-sm font-bold mb-2">Meter Awal</label>
-            <input type="number" 
-                   name="meter_awal" 
-                   id="meter_awal" 
-                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('meter_awal') border-red-500 @enderror"
-                   value="{{ old('meter_awal', $pemakaian->meter_awal) }}"
-                   required>
-            @error('meter_awal')
-                <p class="text-red-500 text-xs italic">{{ $message }}</p>
-            @enderror
-        </div>
-
-        <div>
-            <label for="meter_akhir" class="block text-gray-700 text-sm font-bold mb-2">Meter Akhir</label>
-            <input type="number" 
-                   name="meter_akhir" 
-                   id="meter_akhir" 
-                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('meter_akhir') border-red-500 @enderror"
-                   value="{{ old('meter_akhir', $pemakaian->meter_akhir) }}"
-                   required>
-            @error('meter_akhir')
-                <p class="text-red-500 text-xs italic">{{ $message }}</p>
-            @enderror
-        </div>
-    </div>
-
-    <div class="flex items-center justify-between">
-        <button type="submit" 
-                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-            Update
-        </button>
-        <a href="{{ route('pemakaian.index') }}" 
-           class="text-gray-600 hover:text-gray-800">
-            Batal
-        </a>
-    </div>
-</form>
+</div>
 
 @push('scripts')
 <script>
-    document.getElementById('meter_awal').addEventListener('change', calculateUsage);
-    document.getElementById('meter_akhir').addEventListener('change', calculateUsage);
-
-    function calculateUsage() {
-        const meterAwal = parseInt(document.getElementById('meter_awal').value) || 0;
-        const meterAkhir = parseInt(document.getElementById('meter_akhir').value) || 0;
-        
-        if (meterAkhir < meterAwal) {
-            alert('Meter akhir tidak boleh lebih kecil dari meter awal!');
-            document.getElementById('meter_akhir').value = '';
-        }
-    }
+document.querySelector('select[name="pelanggan_id"]').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    document.getElementById('no_kontrol').value = selectedOption.dataset.noKontrol || '';
+});
 </script>
 @endpush
 @endsection 

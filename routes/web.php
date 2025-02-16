@@ -5,6 +5,7 @@ use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\PemakaianController;
 use App\Http\Controllers\TarifController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TagihanController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,14 +19,14 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Public routes
+// Routes untuk guest
 Route::get('/', function () {
     return view('welcome');
-})->name('home');
+})->name('welcome');
 
 // Cek Tagihan routes
-Route::get('/cek-tagihan', [PemakaianController::class, 'showCekTagihan'])->name('cek-tagihan');
-Route::post('/cek-tagihan', [PemakaianController::class, 'cekTagihan'])->name('cek-tagihan.post');
+Route::get('/cek-tagihan', [TagihanController::class, 'index'])->name('cek-tagihan');
+Route::get('/cek-tagihan/search', [TagihanController::class, 'search'])->name('cek-tagihan.search');
 
 // Admin routes
 Route::middleware(['auth'])->group(function () {
@@ -37,6 +38,10 @@ Route::middleware(['auth'])->group(function () {
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::patch('/pemakaian/{pemakaian}/pay', [PemakaianController::class, 'pay'])->name('pemakaian.pay');
 });
+
+Route::post('/cek-tagihan', [TagihanController::class, 'cekTagihan'])->name('cek-tagihan');
 
 require __DIR__.'/auth.php';

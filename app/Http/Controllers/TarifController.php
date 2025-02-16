@@ -12,7 +12,7 @@ class TarifController extends Controller
      */
     public function index()
     {
-        $tarifs = Tarif::latest()->paginate(10);
+        $tarifs = Tarif::latest()->get();
         return view('tarif.index', compact('tarifs'));
     }
 
@@ -29,15 +29,29 @@ class TarifController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'jenis_plg' => 'required',
-            'biaya_beban' => 'required|numeric',
-            'tarif_kwh' => 'required|numeric'
+        // Validasi input
+        $validated = $request->validate([
+            'daya' => 'required|numeric|min:0',
+            'tarif_per_kwh' => 'required|numeric|min:0',
+            'beban' => 'required|numeric|min:0',
         ]);
 
-        Tarif::create($request->all());
-        return redirect()->route('tarif.index')
-            ->with('success', 'Tarif berhasil ditambahkan.');
+        try {
+            // Konversi nama field sesuai database
+            Tarif::create([
+                'jenis_plg' => $validated['daya'],         // daya disimpan sebagai jenis_plg
+                'tarif_kwh' => $validated['tarif_per_kwh'], // tarif_per_kwh disimpan sebagai tarif_kwh
+                'biaya_beban' => $validated['beban']       // beban disimpan sebagai biaya_beban
+            ]);
+
+            return redirect()
+                ->route('tarif.index')
+                ->with('success', 'Tarif berhasil ditambahkan');
+        } catch (\Exception $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal menyimpan tarif. Silakan coba lagi. Error: ' . $e->getMessage());
+        }
     }
 
     /**

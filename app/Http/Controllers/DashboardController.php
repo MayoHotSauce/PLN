@@ -12,50 +12,48 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $now = Carbon::now();
-        $lastMonth = Carbon::now()->subMonth();
-
-        // Stats
         $totalPelanggan = Pelanggan::count();
-        $pelangganBaru = Pelanggan::whereMonth('created_at', $now->month)
-            ->whereYear('created_at', $now->year)
-            ->count();
-
-        $totalTagihan = Pemakaian::whereMonth('created_at', $now->month)
-            ->whereYear('created_at', $now->year)
+        $pelangganBaru = Pelanggan::whereMonth('created_at', now()->month)->count();
+        
+        $bulanIni = now()->month;
+        $tahunIni = now()->year;
+        
+        // Hitung total tagihan (semua pemakaian)
+        $totalTagihan = Pemakaian::count();
+        
+        // Hitung tagihan yang sudah dibayar
+        $tagihanDibayar = Pemakaian::where('status_pembayaran', 'lunas')
             ->count();
         
-        $tagihanLunas = Pemakaian::whereMonth('created_at', $now->month)
-            ->whereYear('created_at', $now->year)
-            ->where('status_pembayaran', 'sudah_bayar')
-            ->count();
-
-        // Pendapatan (menggunakan biaya_pemakaian + biaya_beban)
-        $totalPendapatan = Pemakaian::whereMonth('created_at', $now->month)
-            ->whereYear('created_at', $now->year)
-            ->where('status_pembayaran', 'sudah_bayar')
-            ->sum(DB::raw('biaya_pemakaian + biaya_beban'));
-
-        $pendapatanBulanLalu = Pemakaian::whereMonth('created_at', $lastMonth->month)
-            ->whereYear('created_at', $lastMonth->year)
-            ->where('status_pembayaran', 'sudah_bayar')
-            ->sum(DB::raw('biaya_pemakaian + biaya_beban'));
-
+        // Hitung total pendapatan (semua pembayaran yang lunas)
+        $totalPendapatan = Pemakaian::where('status_pembayaran', 'lunas')
+            ->sum('total_bayar');
+        
+        // Hitung pendapatan bulan lalu
+        $pendapatanBulanLalu = Pemakaian::where('status_pembayaran', 'lunas')
+            ->where(function($query) {
+                $bulanLalu = now()->subMonth();
+                $query->where('bulan', $bulanLalu->month)
+                      ->where('tahun', $bulanLalu->year);
+            })
+            ->sum('total_bayar');
+        
+        // Hitung persentase perubahan
         $persentasePendapatan = $pendapatanBulanLalu > 0 
-            ? (($totalPendapatan - $pendapatanBulanLalu) / $pendapatanBulanLalu) * 100 
+            ? round(($totalPendapatan - $pendapatanBulanLalu) / $pendapatanBulanLalu * 100, 1)
             : 0;
-
-        // Recent payments
+        
+        // Ambil 5 pembayaran terbaru
         $pembayaranTerbaru = Pemakaian::with('pelanggan')
-            ->latest()
+            ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
-
+        
         return view('dashboard', compact(
             'totalPelanggan',
             'pelangganBaru',
             'totalTagihan',
-            'tagihanLunas',
+            'tagihanDibayar',
             'totalPendapatan',
             'persentasePendapatan',
             'pembayaranTerbaru'
