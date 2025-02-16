@@ -14,12 +14,10 @@
                         <div class="flex justify-start">
                             <a href="/" class="flex items-center">
                                 <img class="h-8 w-auto" src="{{ asset('images/logo.png') }}" alt="PLN Logo">
-                                <span class="ml-2 text-xl font-bold text-gray-900">PLN</span>
                             </a>
                         </div>
                         <div>
                             @auth
-                                <a href="{{ route('dashboard') }}" class="text-blue-600 hover:text-blue-500">Dashboard</a>
                             @else
                                 <a href="{{ route('login') }}" class="text-blue-600 hover:text-blue-500">Login</a>
                             @endauth

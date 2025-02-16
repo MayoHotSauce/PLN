@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Detail Tagihan - {{ config('app.name', 'PLN') }}</title>
+    <title>Detail Tagihan - PLN</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-100">
@@ -13,7 +13,6 @@
             <div class="text-center mb-8">
                 <a href="/" class="inline-flex items-center">
                     <img class="h-12 w-auto" src="{{ asset('images/logo.png') }}" alt="PLN Logo">
-                    <span class="ml-3 text-2xl font-bold text-gray-900">PLN</span>
                 </a>
             </div>
 
@@ -51,7 +50,7 @@
                         <div>
                             <p class="text-sm text-gray-600">Status Pembayaran</p>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $tagihan->status_pembayaran === 'lunas' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                {{ ucfirst($tagihan->status_pembayaran) }}
+                                {{ $tagihan->status_pembayaran === 'belum_bayar' ? 'Belum Bayar' : 'Lunas' }}
                             </span>
                         </div>
                     </div>
